@@ -1,0 +1,17 @@
+export const BOOKING = {
+  TITLE: "رزرو میز",
+  GUESTS_LABEL: "برای چند نفر؟",
+  GUESTS_PROMPT: "تعداد مهمانان را انتخاب کنید:",
+  DATE_LABEL: "چه روزی؟",
+  DATE_PROMPT: "روز مورد نظر را انتخاب کنید:",
+  TIME_LABEL: "چه ساعتی؟",
+  TIME_PROMPT: "ساعت مورد نظر را انتخاب کنید:",
+  INFO_LABEL: "اطلاعات شما",
+  NAME_LABEL: "نام و نام خانوادگی",
+  PHONE_LABEL: "شماره موبایل",
+  SUMMARY_LABEL: "خلاصه رزرو",
+  CONFIRM_BUTTON: "تأیید رزرو",
+  SUCCESS: "رزرو شما با موفقیت ثبت شد.",
+  RESERVATION_CODE: "کد رزرو",
+  CONFIRM: "تأیید رزرو",
+};
