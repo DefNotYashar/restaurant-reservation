@@ -45,6 +45,7 @@ export class ReservationService {
     }
 
     const startOfYear = `${input.date.slice(0, 4)}-01-01`;
+
     const lastReservation = await db
       .select()
       .from(reservations)
@@ -52,7 +53,11 @@ export class ReservationService {
       .orderBy(desc(reservations.createdAt))
       .limit(1);
 
-    const nextNumber = lastReservation.length > 0 ? (parseInt(lastReservation[0].code.replace("#", ""), 10) || 0) + 1 : 1;
+    const nextNumber =
+      lastReservation.length > 0
+        ? (parseInt(lastReservation[0].code.replace("#", ""), 10) || 0) + 1
+        : 1;
+
     const code = `#${nextNumber}`;
 
     const [reservation] = await db
@@ -125,7 +130,10 @@ export class ReservationService {
       .returning();
 
     if (input.tableIds) {
-      await db.delete(reservationTables).where(eq(reservationTables.reservationId, id));
+      await db
+        .delete(reservationTables)
+        .where(eq(reservationTables.reservationId, id));
+
       if (input.tableIds.length > 0) {
         await this.assignTables(id, input.tableIds);
       }
@@ -186,7 +194,11 @@ export class ReservationService {
       tableId,
     }));
 
-    const assigned = await db.insert(reservationTables).values(values).onConflictDoNothing().returning();
+    const assigned = await db
+      .insert(reservationTables)
+      .values(values)
+      .onConflictDoNothing()
+      .returning();
 
     await db
       .update(reservations)
@@ -196,7 +208,12 @@ export class ReservationService {
     return assigned;
   }
 
-  async findSuggestions(restaurantId: string, date: string, time: string, partySize: number): Promise<any[]> {
+  async findSuggestions(
+    restaurantId: string,
+    date: string,
+    time: string,
+    partySize: number,
+  ): Promise<any[]> {
     const suggestions = await this.availability.getAvailableTables({
       restaurantId,
       date,
@@ -231,13 +248,17 @@ export class ReservationService {
   }
 
   async getForDate(restaurantId: string, date: string) {
-    const result = await db
+    const conditions = [eq(reservations.date, date)];
+
+    if (restaurantId !== "ALL") {
+      conditions.push(eq(reservations.restaurantId, restaurantId));
+    }
+
+    return db
       .select()
       .from(reservations)
-      .where(and(eq(reservations.restaurantId, restaurantId), eq(reservations.date, date)))
+      .where(and(...conditions))
       .orderBy(reservations.time);
-
-    return result;
   }
 
   async getById(id: string) {
@@ -255,6 +276,13 @@ export class ReservationService {
   }
 
   async getAll(restaurantId: string) {
+    if (restaurantId === "ALL") {
+      return db
+        .select()
+        .from(reservations)
+        .orderBy(desc(reservations.date), desc(reservations.time));
+    }
+
     return db
       .select()
       .from(reservations)

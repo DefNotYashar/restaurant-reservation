@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+
 import { db } from "./db";
 import { restaurants, customers, tables, users } from "./schema";
 
