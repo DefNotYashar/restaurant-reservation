@@ -55,50 +55,114 @@ export class ConversationEngine {
       type: "text",
     });
 
+    // If user says yes / bale, start reservation
+    if (text.toLowerCase().includes("bale") || text.toLowerCase().includes("yes")) {
+      await db
+        .update(conversationSessions)
+        .set({
+          state: "ASK_NAME",
+          updatedAt: new Date(),
+        })
+        .where(eq(conversationSessions.id, session.id));
+      return {
+        reply: "عالی! نام خود را وارد کنید:",
+        keyboard: null,
+        nextState: "ASK_NAME",
+      };
+    }
+
+    // Greeting / welcome when session starts or user first messages
+    if (currentState === "START" || text.toLowerCase().includes("salam") || text.toLowerCase().includes("hello") || text.toLowerCase().includes("hi")) {
+      return {
+        reply: "Salam! 🌸 لطفاً رزرو کنید (bale / بله برای شروع)",
+        keyboard: null,
+        nextState: "START",
+      };
+    }
+
     if (text === "CREATE_RESERVATION") {
       await db
         .update(conversationSessions)
         .set({
-          state: "ASK_GUESTS",
+          state: "ASK_NAME",
           updatedAt: new Date(),
         })
         .where(eq(conversationSessions.id, session.id));
 
       return {
-        reply: "تعداد مهمانان را انتخاب کنید:",
-        keyboard: this.buildGuestKeyboard(),
+        reply: "لطفاً نام خود را وارد کنید:",
+        keyboard: null,
+        nextState: "ASK_NAME",
+      };
+    }
+
+    if (currentState === "ASK_NAME") {
+      await this.updateDraft(session.id, { name: text.trim() });
+
+      return {
+        reply: "تعداد مهمانان چند نفر است؟ (مثلاً ۴)",
+        keyboard: null,
         nextState: "ASK_GUESTS",
       };
     }
 
-    if (
-      (currentState === "ASK_GUESTS" ||
-        currentState === "CREATE_RESERVATION") &&
-      !isNaN(Number(text))
-    ) {
+    if (currentState === "ASK_GUESTS") {
       const guests = parseInt(text, 10);
-
       if (guests >= 2 && guests <= 20) {
         await this.updateDraft(session.id, { partySize: guests });
-
         await db
           .update(conversationSessions)
-          .set({
-            state: "ASK_DATE",
-            updatedAt: new Date(),
-          })
+          .set({ state: "ASK_DATE", updatedAt: new Date() })
           .where(eq(conversationSessions.id, session.id));
-
         return {
-          reply: "چه روزی می‌خواهید رزرو کنید؟",
-          keyboard: this.buildDateKeyboard(),
+          reply: "چه روزی می‌خواهید رزرو کنید؟ (امروز یا فردا)",
+          keyboard: null,
           nextState: "ASK_DATE",
         };
       }
-
       return {
         reply: "لطفاً تعداد مهمانان را با عدد صحیح وارد کنید (مثلاً ۴).",
-        keyboard: this.buildGuestKeyboard(),
+        keyboard: null,
+        nextState: "ASK_GUESTS",
+      };
+    }
+
+    if (currentState === "ASK_DATE") {
+      const dateText = text.trim().toLowerCase();
+      if (dateText === "امروز" || dateText === "فردا" || dateText === "today" || dateText === "tomorrow" || dateText === "taday") {
+        const dateValue = (dateText === "امروز" || dateText === "today") ? "today" : "tomorrow";
+        await this.updateDraft(session.id, { date: dateValue });
+        await db
+          .update(conversationSessions)
+          .set({ state: "ASK_TIME", updatedAt: new Date() })
+          .where(eq(conversationSessions.id, session.id));
+        return {
+          reply: "ساعت رزرو را وارد کنید (مثلاً ۱۹:۰۰):",
+          keyboard: null,
+          nextState: "ASK_TIME",
+        };
+      }
+      return {
+        reply: "لطفاً امروor فردا (Today/Tomorrow) وارد کنید.",
+        keyboard: null,
+        nextState: "ASK_DATE",
+      };
+    }
+
+    if (currentState === "ASK_TIME") {
+      // Accept time format like 19:00, 20:30, etc.
+      if (/^\d{1,2}:\d{2}$/.test(text.trim())) {
+        await this.updateDraft(session.id, { time: text.trim() });
+        return {
+          reply: "reserv shoma anjam shod mamnun 🌸 - " + (session.draft?.name || "") + " - " + text.trim(),
+          keyboard: this.buildMainKeyboard(),
+          nextState: "CONFIRM",
+        };
+      }
+      return {
+        reply: "لطفاً ساعت را به فرمت ۱۹:۰۰ وارد کنید.",
+        keyboard: null,
+        nextState: "ASK_TIME",
       };
     }
 
