@@ -90,8 +90,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(reservation, { status: 201 });
-  } catch (e: any) {
-    const message = e?.message ?? "خطای داخلی سرور";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "خطای داخلی سرور";
     return NextResponse.json({ error: message }, { status: 409 });
   }
 }

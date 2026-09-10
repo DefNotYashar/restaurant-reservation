@@ -8,6 +8,7 @@ export default function BookPage() {
   const [partySize, setPartySize] = useState(4);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [time, setTime] = useState("18:00");
   const [message, setMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -17,7 +18,7 @@ export default function BookPage() {
       const res = await fetch("/api/reservations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ restaurantId: await fetch("/api/restaurants").then(r => r.json()).then(list => list[0]?.id || "RESTAURANT_ID"), date, time: "20:00", partySize, name, phone }),
+        body: JSON.stringify({ restaurantId: await fetch("/api/restaurants").then(r => r.json()).then(list => list[0]?.id || "RESTAURANT_ID"), date, time, partySize, name, phone }),
       });
       const data = await res.json();
       if (res.ok) setMessage(`رزرو با موفقیت ثبت شد. کد: ${data.code}`);
@@ -54,6 +55,18 @@ export default function BookPage() {
         <div>
           <label className="block text-xs text-zinc-500 mb-1">شماره تماس</label>
           <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="0912..." />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          ["۱۸:۰۰", "۱۹:۰۰", "۲۰:۰۰", "۲۱:۰۰", "۲۲:۰۰"].map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTime(t)}
+              className={`h-10 rounded-lg border text-sm ${time === t ? "bg-amber-500 text-zinc-950 border-amber-500" : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"}`}
+            >
+              {t}
+            </button>
+          ))
         </div>
         <button type="submit" className="w-full h-10 rounded-lg bg-amber-500 text-zinc-950 font-bold hover:bg-amber-400 flex items-center justify-center gap-2">
           <Plus className="w-4 h-4" /> تأیید رزرو

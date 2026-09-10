@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Clock, Users, UserCheck, Table, AlertCircle } from "lucide-react";
-import { ReservationDto } from "@/lib/api";
+import type { ReservationDto } from "@/lib/api";
 import { Badge, statusVariant, statusLabel } from "@/components/ui/badge";
 import { formatJalali, toFaDigits } from "@/lib/persian";
 
@@ -11,20 +10,30 @@ function Card({ children, className }: { children: React.ReactNode; className?: 
 
 export default function AdminPage() {
   const [reservations, setReservations] = useState<ReservationDto[]>([]);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     fetch(`/api/reservations?restaurantId=ALL&date=${date}`)
       .then((r) => r.json())
       .then((d) => {
-        const arr = Array.isArray(d) ? d : [];
-        setReservations(arr);
+        if (!cancelled) {
+          const arr = Array.isArray(d) ? d : [];
+          setReservations(arr);
+        }
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        if (!cancelled) console.error(e);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true };
   }, [date]);
+
+  // ... rest stays the same
 
   const pending = reservations.filter((r) => r.status === "PENDING").length;
   const confirmed = reservations.filter((r) => r.status === "CONFIRMED").length;

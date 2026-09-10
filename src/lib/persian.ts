@@ -8,8 +8,7 @@ export function toFaDigits(value: string | number): string {
 
 export function formatJalali(isoDate: string): string {
   const [y, m, d] = isoDate.split("-").map(Number);
-  // Approximate conversion for display; real Jalali conversion would need a library
-  // Using Persian locale as practical approximation
+  // Use Persian locale for Jalali-style formatting
   return new Date(y, m - 1, d).toLocaleDateString("fa-IR", {
     weekday: "long",
     day: "numeric",

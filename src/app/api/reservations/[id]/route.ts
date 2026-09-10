@@ -23,8 +23,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const updated = await service.updateReservation(id, body);
     return NextResponse.json(updated);
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "خطای داخلی سرور" }, { status: 409 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "خطای داخلی سرور";
+    return NextResponse.json({ error: message }, { status: 409 });
   }
 }
 
