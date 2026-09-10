@@ -34,3 +34,4 @@ Webhook registered: https://temporary-sonic-aurora-veiz8kr.vercel.app/api/webhoo
 - Note: Telegram blocked in Iran; bot saves messages but real-time messaging requires VPN/proxy or alternative platform
 - Vercel env vars: DATABASE_URL, TELEGRAM_BOT_TOKEN, NEXT_PUBLIC_APP_URL added to production
 - Admin landing: page.tsx = /admin content
+Skill reference added.
