@@ -72,7 +72,7 @@ export class ConversationEngine {
     }
 
     // Greeting / welcome when session starts or user first messages
-    if (currentState === "START" || text.toLowerCase().includes("salam") || text.toLowerCase().includes("hello") || text.toLowerCase().includes("hi")) {
+    if (currentState === "START" || text.toLowerCase().includes("salam") || text.toLowerCase().includes("hello") || text.toLowerCase().includes("hi") || text.toLowerCase() === "/start" || text.toLowerCase() === "start") {
       return {
         reply: "Salam! 🌸 لطفاً رزرو کنید (bale / بله برای شروع)",
         keyboard: null,
