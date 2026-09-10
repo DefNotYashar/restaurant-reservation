@@ -153,6 +153,20 @@ export class ConversationEngine {
       // Accept time format like 19:00, 20:30, etc.
       if (/^\d{1,2}:\d{2}$/.test(text.trim())) {
         await this.updateDraft(session.id, { time: text.trim() });
+        // Create reservation in DB when confirmed
+        try {
+          const draft = session.draft || {};
+          const resInput = {
+            restaurantId: session.restaurantId || restaurantId || "",
+            customerId: session.externalUserId || (draft.name ? draft.name : ""),
+            date: draft.date || "today",
+            time: text.trim(),
+            partySize: draft.partySize || 4,
+          };
+          await this.reservationService.createReservation(resInput as any);
+        } catch (dbErr: any) {
+          console.error("Reservation DB insert failed:", dbErr?.message || dbErr);
+        }
         return {
           reply: "reserv shoma anjam shod mamnun 🌸 - " + (session.draft?.name || "") + " - " + text.trim(),
           keyboard: this.buildMainKeyboard(),
