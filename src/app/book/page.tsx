@@ -57,7 +57,7 @@ export default function BookPage() {
           <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="0912..." />
         </div>
         <div className="grid grid-cols-3 gap-3">
-          ["۱۸:۰۰", "۱۹:۰۰", "۲۰:۰۰", "۲۱:۰۰", "۲۲:۰۰"].map((t) => (
+          {["18:00", "19:00", "20:00", "21:00", "22:00"].map((t) => (
             <button
               key={t}
               type="button"
@@ -66,7 +66,7 @@ export default function BookPage() {
             >
               {t}
             </button>
-          ))
+          ))}
         </div>
         <button type="submit" className="w-full h-10 rounded-lg bg-amber-500 text-zinc-950 font-bold hover:bg-amber-400 flex items-center justify-center gap-2">
           <Plus className="w-4 h-4" /> تأیید رزرو
