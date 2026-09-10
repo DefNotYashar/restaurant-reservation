@@ -132,7 +132,7 @@ export class AvailabilityService {
 
     for (let t = open; t + duration <= close; t += duration + buffer) {
       const time = minutesToTime(t);
-      const available = reservedCapacities[t] >= input.partySize;
+      const available = (reservedCapacities[time] ?? 0) >= input.partySize;
 
       slots.push({
         time,
