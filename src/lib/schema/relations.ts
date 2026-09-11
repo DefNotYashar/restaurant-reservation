@@ -9,6 +9,8 @@ import { menuCategories, menuItems } from "./menu";
 import { orders, orderItems } from "./orders";
 import { conversationSessions } from "./conversation-sessions";
 import { messages } from "./messages";
+import { payments } from "./payments";
+import { restaurantSettings } from "./restaurant-settings";
 
 export const restaurantsRelations = relations(restaurants, ({ many }) => ({
   users: many(users),
@@ -16,6 +18,8 @@ export const restaurantsRelations = relations(restaurants, ({ many }) => ({
   tables: many(tables),
   reservations: many(reservations),
   conversationSessions: many(conversationSessions),
+  payments: many(payments),
+  restaurantSettings: many(restaurantSettings),
 }));
 
 export const usersRelations = relations(users, ({ one }) => ({
@@ -58,6 +62,7 @@ export const reservationsRelations = relations(reservations, ({ one, many }) => 
     references: [users.id],
   }),
   reservationTables: many(reservationTables),
+  payments: many(payments),
 }));
 
 export const reservationTablesRelations = relations(reservationTables, ({ one }) => ({

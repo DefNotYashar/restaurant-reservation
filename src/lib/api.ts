@@ -4,6 +4,20 @@ export interface CustomerDto {
   phone: string;
 }
 
+export interface PaymentDto {
+  id: string;
+  reservationId: string;
+  amount: number;
+  currency: string;
+  status: string;
+  authority: string | null;
+  referenceId: string | null;
+  createdAt: string;
+  paidAt: string | null;
+  updatedAt: string;
+  reservation?: ReservationDto | null;
+}
+
 export interface ReservationDto {
   id: string;
   restaurantId: string;
@@ -19,6 +33,7 @@ export interface ReservationDto {
   code: string;
   customer?: CustomerDto | null;
   assignedTables?: { table?: TableDto }[];
+  payment?: PaymentDto | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -86,7 +101,7 @@ export async function fetchTables(restaurantId: string): Promise<TableDto[]> {
 }
 
 export async function createReservation(input: Record<string, unknown>) {
-  return request<ReservationDto>("/api/reservations", { method: "POST", body: JSON.stringify(input) });
+  return request<{ reservation: ReservationDto; payment?: PaymentDto; requiresPayment: boolean }>("/api/reservations", { method: "POST", body: JSON.stringify(input) });
 }
 
 export async function updateReservation(id: string, input: Record<string, unknown>) {
@@ -102,4 +117,16 @@ export async function checkAvailability(input: Record<string, unknown>) {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export async function createPayment(reservationId: string) {
+  return request<PaymentDto>("/api/payments", { method: "POST", body: JSON.stringify({ reservationId }) });
+}
+
+export async function fetchPaymentByReservation(reservationId: string) {
+  return request<PaymentDto>(`/api/payments/by-reservation/${reservationId}`);
+}
+
+export async function fetchPaymentStatus(paymentId: string) {
+  return request<PaymentDto>(`/api/payments/${paymentId}`);
 }

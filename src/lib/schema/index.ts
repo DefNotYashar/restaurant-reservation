@@ -13,4 +13,6 @@ export * from "./restaurant-hours";
 export * from "./audit-logs";
 export * from "./webhook-events";
 export * from "./sessions";
+export * from "./payments";
+export * from "./restaurant-settings";
 export * from "./relations";

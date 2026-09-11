@@ -1,7 +1,6 @@
-"use client";
 import { useEffect, useState } from "react";
-import { X, Phone, Users, CalendarDays, Clock, Cake } from "lucide-react";
-import type { ReservationDto, TableDto } from "@/lib/api";
+import { X, Phone, Users, CalendarDays, Clock, Cake, CreditCard, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import type { ReservationDto, TableDto, PaymentDto } from "@/lib/api";
 import { Badge, statusVariant, statusLabel } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select } from "@/components/ui/input";
@@ -244,6 +243,46 @@ function DrawerBody({
               {busy === "note" ? "…" : "ذخیره یادداشت"}
             </Button>
           </div>
+
+          {r.payment && (
+            <div className="rounded-lg border bg-zinc-950/50 p-3">
+              <div className="flex items-center gap-1.5 text-xs text-zinc-500 mb-1.5">
+                <CreditCard className="w-3.5 h-3.5" /> بیعانه
+              </div>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span>وضعیت:</span>
+                  <span className="font-semibold">
+                    {r.payment.status === "PAID" && <CheckCircle className="w-3.5 h-3.5 inline text-emerald-400" />}
+                    {r.payment.status === "PENDING" && <AlertCircle className="w-3.5 h-3.5 inline text-yellow-400" />}
+                    {r.payment.status === "FAILED" && <XCircle className="w-3.5 h-3.5 inline text-red-400" />}
+                    {r.payment.status === "CANCELLED" && <XCircle className="w-3.5 h-3.5 inline text-zinc-500" />}
+                    {["بدون بیعانه", "در انتظار پرداخت", "پرداخت موفق", "پرداخت ناموفق"][["NO_DEPOSIT", "PENDING", "PAID", "FAILED"].indexOf(r.payment.status)] ?? r.payment.status}
+                  </span>
+                </div>
+                {r.payment.status === "PAID" && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>مبلغ:</span>
+                      <span className="font-semibold text-amber-400">{r.payment.amount} ریال</span>
+                    </div>
+                    {r.payment.paidAt && (
+                      <div className="flex justify-between">
+                        <span>تاریخ پرداخت:</span>
+                        <span className="font-semibold">{new Date(r.payment.paidAt).toLocaleString("fa-IR")}</span>
+                      </div>
+                    )}
+                    {r.payment.referenceId && (
+                      <div className="flex justify-between">
+                        <span>شماره مرجع:</span>
+                        <span className="font-mono text-xs">{r.payment.referenceId}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {editing ? (
             <div className="space-y-2 rounded-lg border border-zinc-800 p-3">

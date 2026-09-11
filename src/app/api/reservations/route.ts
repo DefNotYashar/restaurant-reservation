@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { customers, reservations, reservationTables } from "@/lib/schema";
+import { customers, reservations, reservationTables, restaurantSettings, payments } from "@/lib/schema";
 import { ReservationService } from "@/lib/services/reservation-service";
+import { paymentService } from "@/lib/services/payment-service";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +12,13 @@ const service = new ReservationService();
 async function withRelations(list: (typeof reservations.$inferSelect)[]) {
   return Promise.all(
     list.map(async (r) => {
-      const [customer, links] = await Promise.all([
+      const [customer, links, payment] = await Promise.all([
         db.query.customers.findFirst({ where: (c) => eq(c.id, r.customerId) }),
         db.select().from(reservationTables).where(eq(reservationTables.reservationId, r.id)),
+        db.query.payments.findFirst({
+          where: (p) => eq(p.reservationId, r.id),
+          orderBy: (p, { desc }) => [desc(p.createdAt)],
+        }),
       ]);
       const assignedTables = await Promise.all(
         links.map(async (l) => {
@@ -21,7 +26,7 @@ async function withRelations(list: (typeof reservations.$inferSelect)[]) {
           return { ...l, table };
         }),
       );
-      return { ...r, customer, assignedTables };
+      return { ...r, customer, assignedTables, payment };
     }),
   );
 }
@@ -85,6 +90,13 @@ export async function POST(req: NextRequest) {
         .returning();
     }
 
+    const settings = await db.query.restaurantSettings.findFirst({
+      where: (s) => eq(s.restaurantId, restaurantId),
+    });
+
+    const depositEnabled = settings?.depositEnabled ?? false;
+    const depositAmount = settings?.depositAmount ?? 0;
+
     const reservation = await service.createReservation({
       restaurantId,
       customerId: customer.id,
@@ -96,7 +108,12 @@ export async function POST(req: NextRequest) {
       tableIds,
     });
 
-    return NextResponse.json(reservation, { status: 201 });
+    if (depositEnabled && depositAmount > 0) {
+      const payment = await paymentService.createPayment(reservation.id);
+      return NextResponse.json({ reservation, payment, requiresPayment: true }, { status: 201 });
+    }
+
+    return NextResponse.json({ reservation, requiresPayment: false }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "خطای داخلی سرور";
     return NextResponse.json({ error: message }, { status: 409 });
