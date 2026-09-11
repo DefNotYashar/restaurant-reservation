@@ -12,7 +12,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const reservation = await service.getById(id);
   if (!reservation) return NextResponse.json({ error: "رزرو پیدا نشد" }, { status: 404 });
-  return NextResponse.json(reservation);
+  const { reservationTables: links, ...rest } = reservation as typeof reservation & { reservationTables: unknown[] };
+  return NextResponse.json({ ...rest, assignedTables: links });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

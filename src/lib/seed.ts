@@ -3,6 +3,7 @@ dotenv.config({ path: ".env.local" });
 
 import { db } from "./db";
 import { restaurants, customers, tables, users } from "./schema";
+import { toFaDigits } from "./persian";
 
 export async function seed() {
   const [restaurant] = await db
@@ -15,7 +16,7 @@ export async function seed() {
       closeTime: "23:30",
       reservationDurationMinutes: 90,
       bufferMinutes: 15,
-      maxPartySize: 10,
+      maxPartySize: 500,
       minAdvanceDays: 0,
       maxAdvanceDays: 30,
     })
@@ -41,14 +42,18 @@ export async function seed() {
     })
     .returning();
 
-  await db.insert(tables).values([
-    { restaurantId: restaurant.id, name: "T1", capacity: 2, x: 20, y: 80, width: 60, height: 60 },
-    { restaurantId: restaurant.id, name: "T2", capacity: 2, x: 160, y: 80, width: 60, height: 60 },
-    { restaurantId: restaurant.id, name: "T3", capacity: 4, x: 40, y: 220, width: 80, height: 80 },
-    { restaurantId: restaurant.id, name: "T4", capacity: 4, x: 180, y: 220, width: 80, height: 80 },
-    { restaurantId: restaurant.id, name: "T5", capacity: 6, x: 320, y: 180, width: 90, height: 90 },
-    { restaurantId: restaurant.id, name: "T6", capacity: 8, x: 40, y: 380, width: 100, height: 100 },
-  ]);
+  const tableCaps = [2, 2, 4, 4, 6, 8, 2, 4, 2, 6, 4, 8, 2, 4, 6, 4, 2, 8, 6, 4, 2, 4, 10, 6, 2];
+  await db.insert(tables).values(
+    tableCaps.map((capacity, i) => ({
+      restaurantId: restaurant.id,
+      name: `میز ${toFaDigits(i + 1)}`,
+      capacity,
+      x: 20 + (i % 5) * 140,
+      y: 80 + Math.floor(i / 5) * 140,
+      width: 60,
+      height: 60,
+    })),
+  );
 
   console.log("Seed complete.");
   return { restaurant, customer };

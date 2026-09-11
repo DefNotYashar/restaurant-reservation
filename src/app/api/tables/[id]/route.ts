@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { tables } from "@/lib/schema";
+import { reservationTables, tables } from "@/lib/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  await db.delete(reservationTables).where(eq(reservationTables.tableId, id));
   await db.delete(tables).where(eq(tables.id, id));
   return NextResponse.json({ ok: true });
 }

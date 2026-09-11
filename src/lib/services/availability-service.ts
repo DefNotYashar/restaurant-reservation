@@ -35,22 +35,8 @@ export class AvailabilityService {
       };
     }
 
-    if (input.partySize > restaurant.maxPartySize) {
-      return {
-        status: "NOT_AVAILABLE",
-        reason: `ظرفیت حداکثر ${restaurant.maxPartySize} نفر است`,
-      };
-    }
-
-    const tables = await this.getAvailableTables(input);
-
-    if (tables.length === 0) {
-      return {
-        status: "NOT_AVAILABLE",
-        reason: "میز مناسب در این ساعت موجود نیست",
-      };
-    }
-
+    // Party size is intentionally NOT limited here: staff handle seating
+    // decisions (combining tables, large groups). Only opening hours are enforced.
     return {
       status: "AVAILABLE",
       availableTimeSlots: await this.getAvailableSlots(input),
@@ -124,13 +110,13 @@ export class AvailabilityService {
     const duration = restaurant.reservationDurationMinutes;
     const open = timeToMinutes(restaurant.openTime);
     const close = timeToMinutes(restaurant.closeTime);
-    const buffer = restaurant.bufferMinutes;
 
     const slots: TimeSlot[] = [];
 
     const reservedCapacities = await this.getReservedCapacities(input);
 
-    for (let t = open; t + duration <= close; t += duration + buffer) {
+    // 30-minute steps so the bot offers real choices, not 2-3 coarse slots.
+    for (let t = open; t + duration <= close; t += 30) {
       const time = minutesToTime(t);
       const available = (reservedCapacities[time] ?? 0) >= input.partySize;
 
@@ -154,7 +140,6 @@ export class AvailabilityService {
     const duration = restaurant.reservationDurationMinutes;
     const open = timeToMinutes(restaurant.openTime);
     const close = timeToMinutes(restaurant.closeTime);
-    const buffer = restaurant.bufferMinutes;
 
     const allTables = await db
       .select()
@@ -182,7 +167,7 @@ export class AvailabilityService {
 
     const capacities: Record<string, number> = {};
 
-    for (let t = open; t + duration <= close; t += duration + buffer) {
+    for (let t = open; t + duration <= close; t += 30) {
       capacities[minutesToTime(t)] = totalCapacity;
     }
 
@@ -190,7 +175,7 @@ export class AvailabilityService {
       const rStart = timeToMinutes(r.time);
       const rEnd = rStart + (r.durationMinutes ?? duration);
 
-      for (let t = open; t + duration <= close; t += duration + buffer) {
+      for (let t = open; t + duration <= close; t += 30) {
         const slotTime = minutesToTime(t);
         const slotStart = t;
         const slotEnd = t + duration;

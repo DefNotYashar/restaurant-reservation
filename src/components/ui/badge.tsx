@@ -4,12 +4,12 @@ type BadgeVariant = "default" | "pending" | "confirmed" | "arrived" | "seated" |
 
 const styles: Record<BadgeVariant, string> = {
   default: "bg-zinc-800 text-zinc-200",
-  pending: "bg-amber-500/15 text-amber-400",
-  confirmed: "bg-sky-500/15 text-sky-400",
-  arrived: "bg-emerald-500/15 text-emerald-400",
-  seated: "bg-teal-500/15 text-teal-400",
+  pending: "bg-yellow-400/15 text-yellow-300",
+  confirmed: "bg-emerald-500/15 text-emerald-400",
+  arrived: "bg-sky-500/15 text-sky-400",
+  seated: "bg-sky-500/15 text-sky-400",
   completed: "bg-zinc-700/40 text-zinc-400",
-  cancelled: "bg-red-500/15 text-red-400",
+  cancelled: "bg-zinc-700/40 text-zinc-500",
   noshow: "bg-zinc-700/40 text-zinc-500",
 };
 

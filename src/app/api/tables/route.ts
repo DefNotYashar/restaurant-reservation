@@ -9,6 +9,11 @@ export async function GET(req: NextRequest) {
   const restaurantId = req.nextUrl.searchParams.get("restaurantId");
   if (!restaurantId) return NextResponse.json({ error: "restaurantId الزامی است" }, { status: 400 });
 
+  if (restaurantId === "ALL") {
+    const list = await db.select().from(tables);
+    return NextResponse.json(list);
+  }
+
   const list = await db.select().from(tables).where(eq(tables.restaurantId, restaurantId));
   return NextResponse.json(list);
 }

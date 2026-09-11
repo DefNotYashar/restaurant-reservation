@@ -19,6 +19,8 @@ export interface ReservationDto {
   code: string;
   customer?: CustomerDto | null;
   assignedTables?: { table?: TableDto }[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface TableDto {

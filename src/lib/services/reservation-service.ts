@@ -19,6 +19,8 @@ export interface UpdateReservationInput {
   time?: string;
   partySize?: number;
   notes?: string;
+  customerNotes?: string;
+  staffNotes?: string;
   status?: (typeof reservationStatus.enumValues)[number];
   tableIds?: string[];
 }
@@ -26,6 +28,17 @@ export interface UpdateReservationInput {
 export class ReservationService {
   private availability = new AvailabilityService();
 
+  /** Legal status moves. Downgrades (e.g. ARRIVED → CONFIRMED) are rejected.
+   *  CANCELLED → PENDING is allowed as a staff correction (reopen). */
+  private static transitions: Record<string, string[]> = {
+    PENDING: ["CONFIRMED", "CANCELLED"],
+    CONFIRMED: ["ARRIVED", "CANCELLED", "NO_SHOW"],
+    ARRIVED: ["COMPLETED", "CANCELLED"],
+    SEATED: ["COMPLETED", "CANCELLED"],
+    CANCELLED: ["PENDING"],
+    COMPLETED: [],
+    NO_SHOW: [],
+  };
   async createReservation(input: CreateReservationInput) {
     const restaurant = await db.query.restaurants.findFirst({
       where: (r) => eq(r.id, input.restaurantId),
@@ -85,13 +98,7 @@ export class ReservationService {
   }
 
   async confirmReservation(id: string) {
-    const [updated] = await db
-      .update(reservations)
-      .set({ status: "CONFIRMED", updatedAt: new Date() })
-      .where(eq(reservations.id, id))
-      .returning();
-
-    return updated;
+    return this.updateReservation(id, { status: "CONFIRMED" });
   }
 
   async updateReservation(id: string, input: UpdateReservationInput) {
@@ -100,6 +107,13 @@ export class ReservationService {
     });
 
     if (!existing) throw new Error("رزرو پیدا نشد");
+
+    if (input.status && input.status !== existing.status) {
+      const allowed = ReservationService.transitions[existing.status] ?? [];
+      if (!allowed.includes(input.status)) {
+        throw new Error(`تغییر وضعیت از ${existing.status} به ${input.status} مجاز نیست`);
+      }
+    }
 
     const newDate = input.date ?? existing.date;
     const newTime = input.time ?? existing.time;
@@ -124,6 +138,8 @@ export class ReservationService {
         time: input.time ?? existing.time,
         partySize: input.partySize ?? existing.partySize,
         notes: input.notes ?? existing.notes,
+        customerNotes: input.customerNotes ?? existing.customerNotes,
+        staffNotes: input.staffNotes ?? existing.staffNotes,
         status: input.status ?? existing.status,
         updatedAt: new Date(),
       })
@@ -144,43 +160,23 @@ export class ReservationService {
   }
 
   async cancelReservation(id: string) {
-    const [updated] = await db
-      .update(reservations)
-      .set({ status: "CANCELLED", updatedAt: new Date() })
-      .where(eq(reservations.id, id))
-      .returning();
-
-    return updated;
+    return this.updateReservation(id, { status: "CANCELLED" });
   }
 
   async markArrived(id: string) {
-    const [updated] = await db
-      .update(reservations)
-      .set({ status: "ARRIVED", updatedAt: new Date() })
-      .where(eq(reservations.id, id))
-      .returning();
-
-    return updated;
+    return this.updateReservation(id, { status: "ARRIVED" });
   }
 
   async markSeated(id: string) {
-    const [updated] = await db
-      .update(reservations)
-      .set({ status: "SEATED", updatedAt: new Date() })
-      .where(eq(reservations.id, id))
-      .returning();
-
-    return updated;
+    return this.updateReservation(id, { status: "SEATED" });
   }
 
   async completeReservation(id: string) {
-    const [updated] = await db
-      .update(reservations)
-      .set({ status: "COMPLETED", updatedAt: new Date() })
-      .where(eq(reservations.id, id))
-      .returning();
+    return this.updateReservation(id, { status: "COMPLETED" });
+  }
 
-    return updated;
+  async markNoShow(id: string) {
+    return this.updateReservation(id, { status: "NO_SHOW" });
   }
 
   async assignTables(reservationId: string, tableIds: string[]) {
@@ -201,10 +197,12 @@ export class ReservationService {
       .onConflictDoNothing()
       .returning();
 
-    await db
-      .update(reservations)
-      .set({ status: "CONFIRMED", updatedAt: new Date() })
-      .where(eq(reservations.id, reservationId));
+    if (existing.status === "PENDING") {
+      await db
+        .update(reservations)
+        .set({ status: "CONFIRMED", updatedAt: new Date() })
+        .where(eq(reservations.id, reservationId));
+    }
 
     return assigned;
   }

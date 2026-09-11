@@ -172,7 +172,7 @@ export class ConversationEngine {
     if (currentState === "ASK_PARTY_SIZE") {
       const normalized = toEnglishNumerals(text.trim());
       const partySize = parseInt(normalized, 10);
-      if (isNaN(partySize) || partySize < 1 || partySize > 20) {
+      if (isNaN(partySize) || partySize < 1 || partySize > 500) {
         return {
           reply: "لطفاً تعداد نفرات را به صورت عدد وارد کنید.",
           keyboard: null,
@@ -305,9 +305,16 @@ export class ConversationEngine {
         reason: available.reason,
       });
       await this.setState(sessionId, "ASK_TIME");
+      const keyboard = await this.buildTimeKeyboard(sessionId, rid, draft.date, draft.partySize);
+      const toFa = (s: string) => s.replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[parseInt(d, 10)]);
+      const restaurant = await db.query.restaurants.findFirst({
+        where: (r) => eq(r.id, rid),
+      });
+      const open = toFa((restaurant?.openTime ?? "18:00").slice(0, 5));
+      const close = toFa((restaurant?.closeTime ?? "23:30").slice(0, 5));
       return {
-        reply: "متأسفانه این ساعت خالی نیست. لطفاً ساعت دیگری انتخاب کنید.",
-        keyboard: null,
+        reply: `ساعت کاری رستوران ${open} تا ${close} است. لطفاً ساعتی در این بازه انتخاب کنید.`,
+        keyboard,
         nextState: "ASK_TIME",
       };
     }
@@ -490,7 +497,7 @@ export class ConversationEngine {
       });
       const availableTimes = slots
         .filter((s) => s.available)
-        .slice(0, 8)
+        .slice(0, 10)
         .map((s) => s.time);
       if (availableTimes.length === 0) return null;
       const rows = [];
