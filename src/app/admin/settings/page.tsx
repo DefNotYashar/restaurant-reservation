@@ -5,7 +5,15 @@ import type { TableDto } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fetchAllTables, createTable, updateTable, deleteTable } from "@/lib/tables";
+import {
+  fetchMenu,
+  createCategory,
+  createMenuItem,
+  updateMenuItem,
+  type MenuCategoryDto,
+} from "@/lib/menu";
 import { toFaDigits } from "@/lib/persian";
+import { cn } from "@/lib/utils";
 
 export default function AdminSettingsPage() {
   const [tables, setTables] = useState<TableDto[]>([]);
@@ -16,18 +24,23 @@ export default function AdminSettingsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newCapacity, setNewCapacity] = useState(4);
+  const [menu, setMenu] = useState<MenuCategoryDto[]>([]);
+  const [newCat, setNewCat] = useState("");
+  const [newItem, setNewItem] = useState({ name: "", price: 0, station: "KITCHEN" as "KITCHEN" | "KEBAB", categoryId: "" });
 
   const load = useCallback(() => {
     return Promise.all([
       fetchAllTables("ALL"),
       fetch("/api/restaurants", { cache: "no-store" }).then((r) => r.json()),
+      fetchMenu("ALL").catch(() => [] as MenuCategoryDto[]),
     ])
-      .then(([list, rest]) => {
+      .then(([list, rest, menuList]) => {
         setTables(list.sort((a, b) => a.name.localeCompare(b.name, "fa")));
         if (Array.isArray(rest) && rest[0]) {
           setRestaurantId(rest[0].id);
           setRestaurantName(rest[0].name ?? "");
         }
+        setMenu(menuList);
         setLoading(false);
       })
       .catch((e) => {
@@ -41,14 +54,16 @@ export default function AdminSettingsPage() {
     Promise.all([
       fetchAllTables("ALL"),
       fetch("/api/restaurants", { cache: "no-store" }).then((r) => r.json()),
+      fetchMenu("ALL").catch(() => [] as MenuCategoryDto[]),
     ])
-      .then(([list, rest]: [TableDto[], { id: string; name?: string }[]]) => {
+      .then(([list, rest, menuList]: [TableDto[], { id: string; name?: string }[], MenuCategoryDto[]]) => {
         if (cancelled) return;
         setTables(list.sort((a, b) => a.name.localeCompare(b.name, "fa")));
         if (Array.isArray(rest) && rest[0]) {
           setRestaurantId(rest[0].id);
           setRestaurantName(rest[0].name ?? "");
         }
+        setMenu(menuList);
         setLoading(false);
       })
       .catch((e) => {
@@ -177,6 +192,139 @@ export default function AdminSettingsPage() {
           >
             <Plus className="w-4 h-4" /> افزودن میز
           </Button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
+        <h2 className="font-semibold mb-1">منوی رستوران</h2>
+        <p className="text-xs text-zinc-500 mb-3">
+          آیتم تمام‌شده را غیرفعال کنید تا از صفحه سفارش‌گیری محو شود. قیمت و ایستگاه (آشپزخانه/کبابی) هم اینجا تنظیم می‌شود.
+        </p>
+
+        {loading ? (
+          <div className="text-sm text-zinc-500 py-4 text-center">در حال بارگذاری…</div>
+        ) : (
+          <div className="space-y-4">
+            {menu.map((cat) => (
+              <div key={cat.id} className="rounded-lg border border-zinc-800 p-3">
+                <div className="font-semibold text-sm mb-2">{cat.name}</div>
+                <div className="space-y-1.5">
+                  {cat.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg border px-3 py-1.5",
+                        item.active ? "border-zinc-800 bg-zinc-950" : "border-zinc-800/60 bg-zinc-950/50 opacity-60",
+                      )}
+                    >
+                      <button
+                        onClick={() => run(`avail-${item.id}`, () => updateMenuItem(item.id, { active: !item.active }))}
+                        disabled={busy !== null}
+                        title={item.active ? "تمام شد" : "موجود شد"}
+                        className={cn(
+                          "shrink-0 text-[11px] px-2.5 py-1 rounded-full font-semibold",
+                          item.active ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400",
+                        )}
+                      >
+                        {item.active ? "موجود" : "تمام شد"}
+                      </button>
+                      <Input
+                        defaultValue={item.name}
+                        key={`${item.id}-${item.name}`}
+                        onBlur={(e) => {
+                          if (e.target.value.trim() && e.target.value !== item.name)
+                            run(`iname-${item.id}`, () => updateMenuItem(item.id, { name: e.target.value.trim() }));
+                        }}
+                        className="flex-1 min-w-24 h-8 text-sm"
+                        aria-label="نام آیتم"
+                      />
+                      <Input
+                        type="number"
+                        min={0}
+                        defaultValue={item.price}
+                        key={`${item.id}-${item.price}`}
+                        onBlur={(e) => {
+                          const v = Number(e.target.value);
+                          if (v >= 0 && v !== item.price) run(`iprice-${item.id}`, () => updateMenuItem(item.id, { price: v }));
+                        }}
+                        className="w-24 h-8 text-sm"
+                        aria-label="قیمت"
+                        dir="ltr"
+                      />
+                      <select
+                        value={item.station}
+                        onChange={(e) => run(`istation-${item.id}`, () => updateMenuItem(item.id, { station: e.target.value as "KITCHEN" | "KEBAB" }))}
+                        disabled={busy !== null}
+                        className="h-8 rounded-lg border border-zinc-700 bg-zinc-900 px-2 text-xs"
+                        aria-label="ایستگاه"
+                      >
+                        <option value="KITCHEN">آشپزخانه</option>
+                        <option value="KEBAB">کبابی</option>
+                      </select>
+                    </div>
+                  ))}
+                  {cat.items.length === 0 && <div className="text-xs text-zinc-600">آیتمی ثبت نشده.</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+          <div className="flex gap-2">
+            <Input placeholder="دسته جدید (مثل دسر)" value={newCat} onChange={(e) => setNewCat(e.target.value)} />
+            <Button
+              size="sm"
+              disabled={!newCat.trim() || !restaurantId || busy !== null}
+              onClick={() => {
+                run("create-cat", () => createCategory(restaurantId!, newCat.trim())).then(() => setNewCat(""));
+              }}
+            >
+              <Plus className="w-4 h-4" /> دسته
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Input placeholder="آیتم جدید" value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} />
+            <select
+              value={newItem.categoryId}
+              onChange={(e) => setNewItem({ ...newItem, categoryId: e.target.value })}
+              className="h-10 rounded-lg border border-zinc-700 bg-zinc-900 px-2 text-xs max-w-28"
+              aria-label="دسته"
+            >
+              <option value="">دسته…</option>
+              {menu.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={newItem.station}
+              onChange={(e) => setNewItem({ ...newItem, station: e.target.value as "KITCHEN" | "KEBAB" })}
+              className="h-10 rounded-lg border border-zinc-700 bg-zinc-900 px-2 text-xs"
+              aria-label="ایستگاه"
+            >
+              <option value="KITCHEN">آشپزخانه</option>
+              <option value="KEBAB">کبابی</option>
+            </select>
+            <Button
+              size="sm"
+              disabled={!newItem.name.trim() || !restaurantId || busy !== null}
+              onClick={() => {
+                run("create-item", () =>
+                  createMenuItem({
+                    restaurantId: restaurantId!,
+                    categoryId: newItem.categoryId || null,
+                    name: newItem.name.trim(),
+                    price: newItem.price,
+                    station: newItem.station,
+                  }),
+                ).then(() => setNewItem({ name: "", price: 0, station: "KITCHEN", categoryId: "" }));
+              }}
+            >
+              <Plus className="w-4 h-4" /> آیتم
+            </Button>
+          </div>
         </div>
       </section>
     </div>

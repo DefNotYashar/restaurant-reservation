@@ -2,6 +2,7 @@
 import { TriangleAlert, X, Cake, Users } from "lucide-react";
 import type { ReservationDto, TableDto } from "@/lib/api";
 import { displayNotes, exceedsCapacity, findConflicts, presenceOf, PRESENCE_CARD } from "@/lib/reservations";
+import type { TableOrderSummary } from "@/lib/orders";
 import { toFaDigits } from "@/lib/persian";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ interface Props {
   onDragStartReservation: (r: ReservationDto) => void;
   onDropOnTable: (table: TableDto) => void;
   onDragOverTable: (table: TableDto) => void;
+  orderSummary?: TableOrderSummary | null;
 }
 
 export default function TableCard({
@@ -33,6 +35,7 @@ export default function TableCard({
   onDragStartReservation,
   onDropOnTable,
   onDragOverTable,
+  orderSummary,
 }: Props) {
   return (
     <div
@@ -56,6 +59,18 @@ export default function TableCard({
       <div className="flex items-center justify-between mb-1">
         <span className="font-bold">{table.name}</span>
       </div>
+      {orderSummary && (
+        <div className="text-[11px] text-zinc-400 mb-1">
+          سفارش:
+          {[
+            orderSummary.fresh > 0 ? `${toFaDigits(orderSummary.fresh)} جدید` : null,
+            orderSummary.preparing > 0 ? `${toFaDigits(orderSummary.preparing)} در حال تهیه` : null,
+            orderSummary.ready > 0 ? `${toFaDigits(orderSummary.ready)} آماده` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || "—"}
+        </div>
+      )}
 
       {reservations.length === 0 ? (
         <div className="text-xs text-zinc-600 mt-3 text-center">{dropTarget ? "رها کنید" : "خالی"}</div>

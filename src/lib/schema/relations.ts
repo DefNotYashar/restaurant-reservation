@@ -5,6 +5,8 @@ import { customers } from "./customers";
 import { tables } from "./tables";
 import { reservations } from "./reservations";
 import { reservationTables } from "./reservation-tables";
+import { menuCategories, menuItems } from "./menu";
+import { orders, orderItems } from "./orders";
 import { conversationSessions } from "./conversation-sessions";
 import { messages } from "./messages";
 
@@ -29,6 +31,7 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
     references: [restaurants.id],
   }),
   reservations: many(reservations),
+  orders: many(orders),
   conversationSessions: many(conversationSessions),
 }));
 
@@ -38,6 +41,7 @@ export const tablesRelations = relations(tables, ({ one, many }) => ({
     references: [restaurants.id],
   }),
   reservationTables: many(reservationTables),
+  orders: many(orders),
 }));
 
 export const reservationsRelations = relations(reservations, ({ one, many }) => ({
@@ -64,6 +68,52 @@ export const reservationTablesRelations = relations(reservationTables, ({ one })
   table: one(tables, {
     fields: [reservationTables.tableId],
     references: [tables.id],
+  }),
+}));
+
+export const menuCategoriesRelations = relations(menuCategories, ({ one, many }) => ({
+  restaurant: one(restaurants, {
+    fields: [menuCategories.restaurantId],
+    references: [restaurants.id],
+  }),
+  items: many(menuItems),
+}));
+
+export const menuItemsRelations = relations(menuItems, ({ one }) => ({
+  restaurant: one(restaurants, {
+    fields: [menuItems.restaurantId],
+    references: [restaurants.id],
+  }),
+  category: one(menuCategories, {
+    fields: [menuItems.categoryId],
+    references: [menuCategories.id],
+  }),
+}));
+
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+  restaurant: one(restaurants, {
+    fields: [orders.restaurantId],
+    references: [restaurants.id],
+  }),
+  table: one(tables, {
+    fields: [orders.tableId],
+    references: [tables.id],
+  }),
+  customer: one(customers, {
+    fields: [orders.customerId],
+    references: [customers.id],
+  }),
+  items: many(orderItems),
+}));
+
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+  menuItem: one(menuItems, {
+    fields: [orderItems.menuItemId],
+    references: [menuItems.id],
   }),
 }));
 

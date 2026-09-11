@@ -5,6 +5,8 @@ export * from "./customer-channels";
 export * from "./tables";
 export * from "./reservations";
 export * from "./reservation-tables";
+export * from "./menu";
+export * from "./orders";
 export * from "./conversation-sessions";
 export * from "./messages";
 export * from "./restaurant-hours";

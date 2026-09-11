@@ -15,6 +15,7 @@ import {
   presenceOf,
   PRESENCE_CARD,
 } from "@/lib/reservations";
+import { fetchActiveOrders, summarizeTableOrders, type ActiveOrder } from "@/lib/orders";
 import { toFaDigits } from "@/lib/persian";
 import { cn } from "@/lib/utils";
 
@@ -38,14 +39,16 @@ function relevantAtTime(r: ReservationDto, time: string): boolean {
   return s <= t && t < e;
 }
 
-async function loadPlanData(date: string): Promise<{ reservations: ReservationDto[]; tables: TableDto[] }> {
-  const [resR, resT] = await Promise.all([
+async function loadPlanData(date: string): Promise<{ reservations: ReservationDto[]; tables: TableDto[]; activeOrders: ActiveOrder[] }> {
+  const [resR, resT, ao] = await Promise.all([
     fetch(`/api/reservations?restaurantId=ALL&date=${date}`, { cache: "no-store" }).then((r) => r.json()),
     fetch(`/api/tables?restaurantId=ALL`, { cache: "no-store" }).then((r) => r.json()),
+    fetchActiveOrders("ALL").catch(() => [] as ActiveOrder[]),
   ]);
   return {
     reservations: Array.isArray(resR) ? resR : [],
     tables: Array.isArray(resT) ? resT.filter((t: TableDto) => t.active) : [],
+    activeOrders: Array.isArray(ao) ? ao : [],
   };
 }
 
@@ -60,12 +63,14 @@ export default function TablePlanPage() {
   const [dropTableId, setDropTableId] = useState<string | null>(null);
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
 
   const load = useCallback(() => {
     return loadPlanData(date)
       .then((d) => {
         setReservations(d.reservations);
         setTables(d.tables);
+        setActiveOrders(d.activeOrders);
         setLoading(false);
       })
       .catch((e) => {
@@ -81,6 +86,7 @@ export default function TablePlanPage() {
         if (cancelled) return;
         setReservations(d.reservations);
         setTables(d.tables);
+        setActiveOrders(d.activeOrders);
         setLoading(false);
       })
       .catch((e) => {
@@ -293,6 +299,7 @@ export default function TablePlanPage() {
                     allReservations={reservations}
                     selectedId={dragId ?? selectedId}
                     dropTarget={dropTableId === t.id}
+                    orderSummary={summarizeTableOrders(activeOrders, t.id)}
                     onTableClick={handleTableClick}
                     onReservationSelect={(r) => {
                       setSelectedId(r.id);

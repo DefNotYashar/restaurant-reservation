@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, X, Eye, EyeOff, Clock } from "lucide-react";
 import type { ReservationDto, TableDto } from "@/lib/api";
@@ -43,10 +44,10 @@ function nowMinutes(): number {
   return n.getHours() * 60 + n.getMinutes();
 }
 
-function isTodayISO(iso: string): boolean {
+function todayISO(): string {
   const n = new Date();
   const p = (x: number) => String(x).padStart(2, "0");
-  return iso === `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`;
+  return `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`;
 }
 
 const DISMISS_KEY = "dismissed-cancelled";
@@ -62,16 +63,16 @@ function loadDismissed(): Set<string> {
 export default function AdminPage() {
   const [reservations, setReservations] = useState<ReservationDto[]>([]);
   const [tables, setTables] = useState<TableDto[]>([]);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(loadDismissed);
   const [showDismissed, setShowDismissed] = useState(false);
+  const date = todayISO();
 
   const load = useCallback(() => {
-    return loadDayData(date)
+    return loadDayData(todayISO())
       .then((d) => {
         setReservations(d.reservations);
         setTables(d.tables);
@@ -81,11 +82,11 @@ export default function AdminPage() {
         console.error(e);
         setLoading(false);
       });
-  }, [date]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    loadDayData(date)
+    loadDayData(todayISO())
       .then((d) => {
         if (cancelled) return;
         setReservations(d.reservations);
@@ -100,7 +101,7 @@ export default function AdminPage() {
     return () => {
       cancelled = true;
     };
-  }, [date]);
+  }, []);
 
   useEffect(() => {
     const t = setInterval(load, 30000);
@@ -132,22 +133,26 @@ export default function AdminPage() {
   }
 
   const groups = useMemo(() => {
-    const today = isTodayISO(date);
     const now = nowMinutes();
     const byTime = (a: ReservationDto, b: ReservationDto) => a.time.localeCompare(b.time);
     const pending = reservations.filter((r) => r.status === "PENDING").sort(byTime);
     const coming = reservations.filter((r) => r.status === "CONFIRMED").sort(byTime);
     const here = reservations.filter((r) => ["ARRIVED", "SEATED"].includes(r.status)).sort(byTime);
-    const soonIds = today
-      ? new Set(coming.filter((r) => timeToMinutes(r.time) - now >= -15 && timeToMinutes(r.time) - now <= 90).map((r) => r.id))
-      : new Set<string>();
+    const soonIds = new Set(
+      coming
+        .filter((r) => timeToMinutes(r.time) - now >= -15 && timeToMinutes(r.time) - now <= 90)
+        .map((r) => r.id),
+    );
+    const unassigned = reservations.filter(
+      (r) => ["CONFIRMED", "ARRIVED", "SEATED"].includes(r.status) && (!r.assignedTables || r.assignedTables.length === 0),
+    ).length;
     const cancelled = reservations
       .filter((r) => ["CANCELLED", "NO_SHOW"].includes(r.status) && (showDismissed || !dismissed.has(r.id)))
       .sort(byTime);
     const hiddenCount = reservations.filter((r) => ["CANCELLED", "NO_SHOW"].includes(r.status) && dismissed.has(r.id)).length;
     const done = reservations.filter((r) => r.status === "COMPLETED").sort(byTime);
-    return { pending, coming, here, soonIds, cancelled, hiddenCount, done, today };
-  }, [reservations, date, dismissed, showDismissed]);
+    return { pending, coming, here, soonIds, unassigned, cancelled, hiddenCount, done };
+  }, [reservations, dismissed, showDismissed]);
 
   const drawerReservation = reservations.find((r) => r.id === drawerId) ?? null;
   const total = reservations.length;
@@ -233,7 +238,7 @@ export default function AdminPage() {
   ) {
     if (count === 0) return null;
     return (
-      <div className="border border-zinc-800 rounded-xl overflow-hidden">
+      <div id={`today-${key}`} className="border border-zinc-800 rounded-xl overflow-hidden scroll-mt-4">
         <div className={cn("flex items-center justify-between px-4 py-2.5 border-b border-zinc-800", accent)}>
           <span className="text-sm font-semibold">{title}</span>
           <span className="text-xs opacity-80">{toFaDigits(count)}</span>
@@ -248,40 +253,38 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">امروز</h1>
-          <p className="text-sm text-zinc-400">{formatJalali(date)}</p>
-        </div>
-        <div>
-          <label className="text-xs text-zinc-500">تاریخ</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => {
-              setLoading(true);
-              setDate(e.target.value);
-            }}
-            className="mr-2 h-8 px-2 rounded bg-zinc-900 border border-zinc-800 text-zinc-100 text-xs"
-          />
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold">امروز</h1>
+        <p className="text-sm text-zinc-400">{formatJalali(date)}</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <Card><div className="text-xs text-zinc-500">کل رزروها</div><div className="text-2xl font-bold mt-1">{toFaDigits(total)}</div></Card>
         <Card><div className="text-xs text-zinc-500">مهمانان</div><div className="text-2xl font-bold text-amber-400 mt-1">{toFaDigits(guests)}</div></Card>
-        <Card>
-          <div className="text-xs text-zinc-500">نیازمند تأیید</div>
-          <div className="text-2xl font-bold text-yellow-300 mt-1">{toFaDigits(groups.pending.length)}</div>
-        </Card>
-        <Card>
-          <div className="text-xs text-zinc-500">در راه</div>
-          <div className="text-2xl font-bold text-emerald-400 mt-1">{toFaDigits(groups.coming.length)}</div>
-        </Card>
-        <Card>
-          <div className="text-xs text-zinc-500">در رستوران</div>
-          <div className="text-2xl font-bold text-sky-400 mt-1">{toFaDigits(groups.here.length)}</div>
-        </Card>
+        <a href="#today-pending" className="block hover:border-yellow-400/40 transition-colors rounded-xl">
+          <Card className="h-full">
+            <div className="text-xs text-zinc-500">نیازمند تأیید</div>
+            <div className="text-2xl font-bold text-yellow-300 mt-1">{toFaDigits(groups.pending.length)}</div>
+          </Card>
+        </a>
+        <a href="#today-coming" className="block hover:border-emerald-500/40 transition-colors rounded-xl">
+          <Card className="h-full">
+            <div className="text-xs text-zinc-500">در راه</div>
+            <div className="text-2xl font-bold text-emerald-400 mt-1">{toFaDigits(groups.coming.length)}</div>
+          </Card>
+        </a>
+        <a href="#today-here" className="block hover:border-sky-500/40 transition-colors rounded-xl">
+          <Card className="h-full">
+            <div className="text-xs text-zinc-500">در رستوران</div>
+            <div className="text-2xl font-bold text-sky-400 mt-1">{toFaDigits(groups.here.length)}</div>
+          </Card>
+        </a>
+        <Link href="/admin/table-plan" className="block hover:border-amber-400/40 transition-colors rounded-xl">
+          <Card className="h-full">
+            <div className="text-xs text-zinc-500">بدون میز</div>
+            <div className="text-2xl font-bold text-amber-400 mt-1">{toFaDigits(groups.unassigned)}</div>
+          </Card>
+        </Link>
       </div>
 
       {error && (
