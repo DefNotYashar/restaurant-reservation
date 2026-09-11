@@ -8,6 +8,8 @@ import {
   LayoutGrid,
   Users,
   Settings,
+  ChefHat,
+  Flame,
   Menu,
   X,
 } from "lucide-react";
@@ -19,6 +21,8 @@ const links = [
   { label: "رزروها", href: "/admin/reservations", icon: CalendarDays },
   { label: "نقشه میزها", href: "/admin/table-plan", icon: LayoutGrid },
   { label: "مشتریان", href: "/admin/customers", icon: Users },
+  { label: "آشپزخانه", href: "/admin/kitchen", icon: ChefHat },
+  { label: "کبابی", href: "/admin/kebab", icon: Flame },
   { label: "تنظیمات", href: "/admin/settings", icon: Settings },
 ];
 

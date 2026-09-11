@@ -1,5 +1,5 @@
-import StationBoard from "@/components/stations/StationBoard";
+import { redirect } from "next/navigation";
 
-export default function KebabPage() {
-  return <StationBoard station="KEBAB" />;
+export default function KebabRedirect() {
+  redirect("/admin/kebab");
 }

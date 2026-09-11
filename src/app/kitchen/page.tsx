@@ -1,5 +1,5 @@
-import StationBoard from "@/components/stations/StationBoard";
+import { redirect } from "next/navigation";
 
-export default function KitchenPage() {
-  return <StationBoard station="KITCHEN" />;
+export default function KitchenRedirect() {
+  redirect("/admin/kitchen");
 }

@@ -341,7 +341,7 @@ export default function AdminPage() {
                 </Link>
               )}
               {groups.readyCount > 0 && (
-                <Link href="/kitchen" className="text-xs px-3 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                <Link href="/admin/kitchen" className="text-xs px-3 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
                   {toFaDigits(groups.readyCount)} قلم آماده سرو
                 </Link>
               )}
