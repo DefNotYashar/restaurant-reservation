@@ -9,7 +9,7 @@ const styles: Record<BadgeVariant, string> = {
   arrived: "bg-sky-500/15 text-sky-400",
   seated: "bg-sky-500/15 text-sky-400",
   completed: "bg-zinc-700/40 text-zinc-400",
-  cancelled: "bg-zinc-700/40 text-zinc-500",
+  cancelled: "bg-red-500/15 text-red-400",
   noshow: "bg-zinc-700/40 text-zinc-500",
 };
 

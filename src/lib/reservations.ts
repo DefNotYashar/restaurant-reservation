@@ -40,16 +40,16 @@ export const PRESENCE_BAR: Record<Presence, string> = {
   pending: "border-r-yellow-400",
   coming: "border-r-emerald-500",
   here: "border-r-sky-500",
-  cancelled: "border-r-zinc-700",
+  cancelled: "border-r-red-500",
   done: "border-r-zinc-700",
 };
 
-/** Full card tint per presence (table plan + lists). Cancelled reads as done. */
+/** Full card tint per presence (table plan + lists). */
 export const PRESENCE_CARD: Record<Presence, string> = {
   pending: "border-yellow-400/40 bg-yellow-400/10",
   coming: "border-emerald-500/40 bg-emerald-500/10",
   here: "border-sky-500/40 bg-sky-500/10",
-  cancelled: "border-zinc-700 bg-zinc-950 opacity-70",
+  cancelled: "border-red-500/40 bg-red-500/10",
   done: "border-zinc-700 bg-zinc-950 opacity-70",
 };
 

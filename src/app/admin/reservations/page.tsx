@@ -246,7 +246,7 @@ export default function AdminReservationsPage() {
           {renderSection("در انتظار تأیید", groups.pending, "bg-yellow-400/10 text-yellow-300")}
           {renderSection("در راه", groups.coming, "bg-emerald-500/10 text-emerald-400")}
           {renderSection("در رستوران", groups.here, "bg-sky-500/10 text-sky-400")}
-          {renderSection("لغوشده", groups.cancelled, "bg-zinc-800/60 text-zinc-400", true)}
+          {renderSection("لغوشده", groups.cancelled, "bg-red-500/10 text-red-400", true)}
           {renderSection("پایان‌یافته", groups.done, "bg-zinc-800/40 text-zinc-500", true)}
         </div>
       )}

@@ -64,6 +64,7 @@ export default function WaiterPage() {
   const [view, setView] = useState<{ name: "tables" } | { name: "table"; tableId: string } | { name: "build"; tableId: string }>({ name: "tables" });
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Record<string, number>>({});
+  const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
   const [draftNote, setDraftNote] = useState("");
   const [review, setReview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -114,6 +115,7 @@ export default function WaiterPage() {
 
   function startOrder(tableId: string) {
     setDraft({});
+    setDraftNotes({});
     setDraftNote("");
     setError(null);
     setReview(false);
@@ -143,12 +145,20 @@ export default function WaiterPage() {
   const currentTable = tables.find((t) => t.id === (view.name === "tables" ? null : view.tableId));
 
   function setQty(id: string, qty: number) {
-    setDraft((prev) => {
-      const next = { ...prev };
-      if (qty <= 0) delete next[id];
-      else next[id] = Math.min(qty, 99);
-      return next;
-    });
+    if (qty <= 0) {
+      setDraft((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setDraftNotes((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    } else {
+      setDraft((prev) => ({ ...prev, [id]: Math.min(qty, 99) }));
+    }
   }
 
   async function submit() {
@@ -163,12 +173,17 @@ export default function WaiterPage() {
           restaurantId,
           tableId: view.tableId,
           note: draftNote || undefined,
-          items: draftLines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty })),
+          items: draftLines.map((l) => ({
+            menuItemId: l.item.id,
+            quantity: l.qty,
+            note: draftNotes[l.item.id]?.trim() || undefined,
+          })),
         }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? "ثبت سفارش ناموفق بود");
       setDraft({});
+      setDraftNotes({});
       setDraftNote("");
       setReview(false);
       openTable(view.tableId);
@@ -369,20 +384,28 @@ export default function WaiterPage() {
             {error && <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{error}</div>}
             <div className="space-y-2">
               {draftLines.map((l) => (
-                <div key={l.item.id} className="flex items-center justify-between gap-2 rounded-xl bg-zinc-950 border border-zinc-800 px-3 py-2">
-                  <div>
-                    <div className="font-medium">{l.item.name}</div>
-                    <div className="text-xs text-zinc-500">{faMoney(l.item.price)} تومان</div>
+                <div key={l.item.id} className="rounded-xl bg-zinc-950 border border-zinc-800 px-3 py-2 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-medium">{l.item.name}</div>
+                      <div className="text-xs text-zinc-500">{faMoney(l.item.price)} تومان</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setQty(l.item.id, l.qty + 1)} className="w-9 h-9 rounded-lg bg-zinc-800 active:scale-95" aria-label="افزودن">
+                        <Plus className="w-4 h-4 mx-auto" />
+                      </button>
+                      <span className="font-bold w-6 text-center">{toFaDigits(l.qty)}</span>
+                      <button onClick={() => setQty(l.item.id, l.qty - 1)} className="w-9 h-9 rounded-lg bg-zinc-800 active:scale-95" aria-label="کم کردن">
+                        <Minus className="w-4 h-4 mx-auto" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setQty(l.item.id, l.qty + 1)} className="w-9 h-9 rounded-lg bg-zinc-800 active:scale-95" aria-label="افزودن">
-                      <Plus className="w-4 h-4 mx-auto" />
-                    </button>
-                    <span className="font-bold w-6 text-center">{toFaDigits(l.qty)}</span>
-                    <button onClick={() => setQty(l.item.id, l.qty - 1)} className="w-9 h-9 rounded-lg bg-zinc-800 active:scale-95" aria-label="کم کردن">
-                      <Minus className="w-4 h-4 mx-auto" />
-                    </button>
-                  </div>
+                  <input
+                    value={draftNotes[l.item.id] ?? ""}
+                    onChange={(e) => setDraftNotes((prev) => ({ ...prev, [l.item.id]: e.target.value }))}
+                    placeholder="توضیح این آیتم (اختیاری)"
+                    className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs placeholder:text-zinc-600 focus:border-amber-400 focus:outline-none"
+                  />
                 </div>
               ))}
             </div>

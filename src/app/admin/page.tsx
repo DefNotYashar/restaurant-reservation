@@ -328,7 +328,7 @@ export default function AdminPage() {
             "cancelled",
             "لغوشده",
             groups.cancelled.length,
-            "bg-zinc-800/40 text-zinc-500",
+            "bg-red-500/10 text-red-400",
             groups.cancelled.map((r) => (
               <tr key={r.id} className="border-b border-zinc-800 last:border-0 opacity-60">
                 <td className="px-4 py-3 font-medium whitespace-nowrap">{toFaDigits(r.time.slice(0, 5))}</td>
