@@ -13,6 +13,8 @@ export interface ReservationDto {
   partySize: number;
   status: string;
   notes?: string | null;
+  customerNotes?: string | null;
+  staffNotes?: string | null;
   source?: string | null;
   code: string;
   customer?: CustomerDto | null;

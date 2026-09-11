@@ -26,6 +26,8 @@ export const reservations = pgTable("reservations", {
   status: reservationStatus("status").default("PENDING").notNull(),
   durationMinutes: integer("duration_minutes"),
   notes: text("notes"),
+  customerNotes: text("customer_notes"),
+  staffNotes: text("staff_notes"),
   source: varchar("source", { length: 50 }).default("WEB").notNull(),
   assignedByUserId: uuid("assigned_by_user_id").references(() => users.id),
   code: varchar("code", { length: 20 }).notNull(),

@@ -70,14 +70,17 @@ WhatsApp Access Token (.env):
   WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN_READY
 
 Conversation States (full state machine):
-  START (welcome screen with 4 buttons) →
-  CREATE_RESERVATION (reservation intent selected) →
-  ASK_GUESTS (numeric selection: 2/3/4/5/6/8) →
-  ASK_DATE (date picker: امروز/فردا/انتخاب تاریخ) →
-  ASK_TIME (available time slots from AvailabilityService) →
-  ASK_NAME (text input: نام و نام خانوادگی) →
+  IDLE (welcome: "سلام، برای رزرو کلمه «رزرو» را تایپ کنید.") →
+  ASK_NAME (text input: نام) →
   ASK_PHONE (text input: شماره موبایل) →
-  CONFIRM (summary card: name + guests + Jalali date + time + confirmation buttons: تأیید رزرو / ویرایش / لغو) →
+  ASK_PARTY_SIZE (numeric 1–20) →
+  ASK_DATE (امروز / فردا → Tehran date) →
+  ASK_TIME (H/HH/H:MM/HH:MM + dynamic buttons from AvailabilityService) →
+  ASK_NOTES (optional notes + "خیر" skip button) →
+  VALIDATE (AvailabilityService.check) →
+  CREATE_RESERVATION (getOrCreateCustomer → ReservationService.createReservation) →
+  SUCCESS ("رزرو شد." + details) → IDLE
+  ---
   CANCEL_RESERVATION (cancel flow using reservation code)
   MY_RESERVATIONS (show customer reservations from ReservationService.findByCustomer)
   CHECK_RESERVATION (check availability without creating)
@@ -101,3 +104,18 @@ Status Mapping (DB enum → Persian label):
   COMPLETED → تکمیل شد
   CANCELLED → لغو شده
   NO_SHOW → عدم حضور
+
+---
+
+## Recent Changes (2026-09-11)
+
+- Added `ASK_PHONE` state after `ASK_NAME` (required phone number)
+- Added `ASK_NOTES` state after `ASK_TIME` (optional special requests)
+- Added "خیر" (Skip) button to `ASK_NOTES` with `callback_data: SKIP_NOTES`
+- Pass `notes` to `ReservationService.createReservation`
+- Fixed `availability-service.ts`: capacity lookup key bug (time string vs numeric minutes)
+- Fixed date handling: real Tehran dates instead of "today"/"tomorrow" literals
+- Added availability rejection logging
+- `getOrCreateCustomer` creates customer with phone, returns UUID
+- Self-heals legacy "today"/"tomorrow" drafts to real Tehran dates
+- Skip button (`callback_data: SKIP_NOTES`) for optional notes step

@@ -69,6 +69,7 @@ export class ReservationService {
         time: input.time,
         partySize: input.partySize,
         notes: input.notes,
+        customerNotes: input.notes,
         source: input.source ?? "WEB",
         status: "PENDING",
         durationMinutes: restaurant.reservationDurationMinutes,
