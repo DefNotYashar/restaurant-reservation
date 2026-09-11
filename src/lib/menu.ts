@@ -7,6 +7,7 @@ export interface MenuItemDto {
   station: "KITCHEN" | "KEBAB";
   sortOrder: number;
   active: boolean;
+  available: boolean;
 }
 
 export interface MenuCategoryDto {
@@ -52,11 +53,11 @@ export async function createMenuItem(input: {
 
 export async function updateMenuItem(
   id: string,
-  input: Partial<Pick<MenuItemDto, "name" | "price" | "station" | "active" | "categoryId">>,
+  input: Partial<Pick<MenuItemDto, "name" | "price" | "station" | "active" | "available" | "categoryId">>,
 ): Promise<MenuItemDto> {
   return req<MenuItemDto>(`/api/menu/items/${id}`, { method: "PATCH", body: JSON.stringify(input) });
 }
 
 export async function setItemAvailable(id: string, available: boolean): Promise<MenuItemDto> {
-  return updateMenuItem(id, { active: available });
+  return updateMenuItem(id, { available });
 }

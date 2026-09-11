@@ -22,6 +22,9 @@ export const menuItems = pgTable("menu_items", {
   station: orderStation("station").default("KITCHEN").notNull(),
   sortOrder: integer("sort_order").default(0).notNull(),
   active: boolean("active").default(true).notNull(),
+  // Can be ordered right now. Distinct from `active` (item exists in menu):
+  // unavailable items stay visible-but-muted in the ordering UI.
+  available: boolean("available").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

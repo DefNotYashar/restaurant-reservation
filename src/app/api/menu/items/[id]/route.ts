@@ -11,7 +11,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!body) return NextResponse.json({ error: "بدنه درخواست نامعتبر است" }, { status: 400 });
 
   const patch: Record<string, unknown> = { updatedAt: new Date() };
-  for (const key of ["name", "price", "station", "sortOrder", "active", "categoryId"]) {
+  for (const key of ["name", "price", "station", "sortOrder", "active", "available", "categoryId"]) {
     if (body[key] !== undefined) patch[key] = body[key];
   }
   if (patch.station && !["KITCHEN", "KEBAB"].includes(patch.station as string)) {

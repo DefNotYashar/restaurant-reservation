@@ -198,7 +198,7 @@ export default function AdminSettingsPage() {
       <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
         <h2 className="font-semibold mb-1">منوی رستوران</h2>
         <p className="text-xs text-zinc-500 mb-3">
-          آیتم تمام‌شده را غیرفعال کنید تا از صفحه سفارش‌گیری محو شود. قیمت و ایستگاه (آشپزخانه/کبابی) هم اینجا تنظیم می‌شود.
+          آیتم ناموجود را با دکمه موجود/ناموجود مشخص کنید. آیتم ناموجود در سفارش‌گیری کم‌رنگ و غیرقابل انتخاب می‌شود، ولی از منو حذف نمی‌شود.
         </p>
 
         {loading ? (
@@ -214,19 +214,19 @@ export default function AdminSettingsPage() {
                       key={item.id}
                       className={cn(
                         "flex items-center gap-2 rounded-lg border px-3 py-1.5",
-                        item.active ? "border-zinc-800 bg-zinc-950" : "border-zinc-800/60 bg-zinc-950/50 opacity-60",
+                        item.available ? "border-zinc-800 bg-zinc-950" : "border-zinc-800/60 bg-zinc-950/50 opacity-60",
                       )}
                     >
                       <button
-                        onClick={() => run(`avail-${item.id}`, () => updateMenuItem(item.id, { active: !item.active }))}
+                        onClick={() => run(`avail-${item.id}`, () => updateMenuItem(item.id, { available: !item.available }))}
                         disabled={busy !== null}
-                        title={item.active ? "تمام شد" : "موجود شد"}
+                        title={item.available ? "ناموجود شود" : "موجود شود"}
                         className={cn(
                           "shrink-0 text-[11px] px-2.5 py-1 rounded-full font-semibold",
-                          item.active ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400",
+                          item.available ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400",
                         )}
                       >
-                        {item.active ? "موجود" : "تمام شد"}
+                        {item.available ? "موجود" : "ناموجود"}
                       </button>
                       <Input
                         defaultValue={item.name}

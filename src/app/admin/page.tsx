@@ -15,22 +15,26 @@ import {
   cancelReservationById,
   presenceOf,
   PRESENCE_BAR,
+  findConflicts,
 } from "@/lib/reservations";
 import { formatJalali, toFaDigits } from "@/lib/persian";
 import { cn } from "@/lib/utils";
+import { fetchActiveOrders, type ActiveOrder } from "@/lib/orders";
 
 function Card({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={`rounded-xl border border-zinc-800 bg-zinc-900 p-4 ${className}`}>{children}</div>;
 }
 
-async function loadDayData(date: string): Promise<{ reservations: ReservationDto[]; tables: TableDto[] }> {
-  const [resR, resT] = await Promise.all([
+async function loadDayData(date: string): Promise<{ reservations: ReservationDto[]; tables: TableDto[]; activeOrders: ActiveOrder[] }> {
+  const [resR, resT, ao] = await Promise.all([
     fetch(`/api/reservations?restaurantId=ALL&date=${date}`, { cache: "no-store" }).then((r) => r.json()),
     fetch(`/api/tables?restaurantId=ALL`, { cache: "no-store" }).then((r) => r.json()),
+    fetchActiveOrders("ALL").catch(() => [] as ActiveOrder[]),
   ]);
   return {
     reservations: Array.isArray(resR) ? resR : [],
     tables: Array.isArray(resT) ? resT : [],
+    activeOrders: Array.isArray(ao) ? ao : [],
   };
 }
 
@@ -69,6 +73,7 @@ export default function AdminPage() {
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(loadDismissed);
   const [showDismissed, setShowDismissed] = useState(false);
+  const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const date = todayISO();
 
   const load = useCallback(() => {
@@ -76,6 +81,7 @@ export default function AdminPage() {
       .then((d) => {
         setReservations(d.reservations);
         setTables(d.tables);
+        setActiveOrders(d.activeOrders);
         setLoading(false);
       })
       .catch((e) => {
@@ -91,6 +97,7 @@ export default function AdminPage() {
         if (cancelled) return;
         setReservations(d.reservations);
         setTables(d.tables);
+        setActiveOrders(d.activeOrders);
         setLoading(false);
       })
       .catch((e) => {
@@ -151,8 +158,26 @@ export default function AdminPage() {
       .sort(byTime);
     const hiddenCount = reservations.filter((r) => ["CANCELLED", "NO_SHOW"].includes(r.status) && dismissed.has(r.id)).length;
     const done = reservations.filter((r) => r.status === "COMPLETED").sort(byTime);
-    return { pending, coming, here, soonIds, unassigned, cancelled, hiddenCount, done };
-  }, [reservations, dismissed, showDismissed]);
+    const conflictPairs = new Set<string>();
+    for (const r of reservations) {
+      if (!["CONFIRMED", "ARRIVED", "SEATED"].includes(r.status)) continue;
+      for (const a of r.assignedTables ?? []) {
+        const tableId = a.table?.id;
+        if (!tableId) continue;
+        for (const c of findConflicts(r, reservations, tableId)) {
+          conflictPairs.add([r.id, c.id].sort().join("|"));
+        }
+      }
+    }
+    const readyCount = activeOrders.reduce(
+      (s, o) => s + o.items.filter((i) => i.status === "READY").reduce((x, i) => x + i.quantity, 0),
+      0,
+    );
+    const specialCount = reservations.filter(
+      (r) => ["PENDING", "CONFIRMED", "ARRIVED", "SEATED"].includes(r.status) && displayNotes(r),
+    ).length;
+    return { pending, coming, here, soonIds, unassigned, cancelled, hiddenCount, done, conflicts: conflictPairs.size, readyCount, specialCount };
+  }, [reservations, activeOrders, dismissed, showDismissed]);
 
   const drawerReservation = reservations.find((r) => r.id === drawerId) ?? null;
   const total = reservations.length;
@@ -290,6 +315,44 @@ export default function AdminPage() {
       {error && (
         <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</div>
       )}
+
+      {!loading &&
+        (groups.pending.length > 0 ||
+          groups.unassigned > 0 ||
+          groups.conflicts > 0 ||
+          groups.readyCount > 0 ||
+          groups.specialCount > 0) && (
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
+            <div className="text-xs text-zinc-500 mb-2">نیاز به توجه</div>
+            <div className="flex flex-wrap gap-2">
+              {groups.pending.length > 0 && (
+                <a href="#today-pending" className="text-xs px-3 py-1.5 rounded-full bg-yellow-400/10 text-yellow-300 border border-yellow-400/20">
+                  {toFaDigits(groups.pending.length)} رزرو منتظر تأیید
+                </a>
+              )}
+              {groups.unassigned > 0 && (
+                <Link href="/admin/table-plan" className="text-xs px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  {toFaDigits(groups.unassigned)} رزرو بدون میز
+                </Link>
+              )}
+              {groups.conflicts > 0 && (
+                <Link href="/admin/table-plan" className="text-xs px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+                  {toFaDigits(groups.conflicts)} تداخل میز
+                </Link>
+              )}
+              {groups.readyCount > 0 && (
+                <Link href="/kitchen" className="text-xs px-3 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                  {toFaDigits(groups.readyCount)} قلم آماده سرو
+                </Link>
+              )}
+              {groups.specialCount > 0 && (
+                <a href="#today-coming" className="text-xs px-3 py-1.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
+                  {toFaDigits(groups.specialCount)} درخواست ویژه
+                </a>
+              )}
+            </div>
+          </div>
+        )}
 
       {loading ? (
         <div className="space-y-4">

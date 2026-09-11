@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import TableCard from "@/components/admin/TableCard";
 import ReservationDrawer from "@/components/admin/ReservationDrawer";
+import TableOrderPanel from "@/components/admin/TableOrderPanel";
 import {
   unassignTables,
   isAcceptedReservation,
@@ -62,6 +63,7 @@ export default function TablePlanPage() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropTableId, setDropTableId] = useState<string | null>(null);
   const [drawerId, setDrawerId] = useState<string | null>(null);
+  const [orderTableId, setOrderTableId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
 
@@ -150,7 +152,11 @@ export default function TablePlanPage() {
 
   function handleTableClick(table: TableDto) {
     const activeId = dragId ?? selectedId;
-    if (activeId) doAssign(activeId, table.id);
+    if (activeId) {
+      doAssign(activeId, table.id);
+      return;
+    }
+    setOrderTableId(table.id);
   }
 
   return (
@@ -327,6 +333,19 @@ export default function TablePlanPage() {
         onClose={() => setDrawerId(null)}
         onChanged={load}
       />
+
+      {(() => {
+        const orderTable = tables.find((t) => t.id === orderTableId) ?? null;
+        if (!orderTable) return null;
+        return (
+          <TableOrderPanel
+            table={orderTable}
+            reservation={assignedFor(orderTable.id)[0] ?? null}
+            onClose={() => setOrderTableId(null)}
+            onSubmitted={load}
+          />
+        );
+      })()}
     </div>
   );
 }

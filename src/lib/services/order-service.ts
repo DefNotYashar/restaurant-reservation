@@ -83,6 +83,7 @@ export class OrderService {
       const menu = byId.get(item.menuItemId);
       if (!menu) throw new Error("آیتم منو پیدا نشد");
       if (!menu.active) throw new Error(`آیتم ${menu.name} غیرفعال است`);
+      if (!menu.available) throw new Error(`آیتم ${menu.name} فعلاً موجود نیست`);
       if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) {
         throw new Error("تعداد نامعتبر است");
       }
@@ -140,6 +141,7 @@ export class OrderService {
       const menu = byId.get(item.menuItemId);
       if (!menu) throw new Error("آیتم منو پیدا نشد");
       if (!menu.active) throw new Error(`آیتم ${menu.name} غیرفعال است`);
+      if (!menu.available) throw new Error(`آیتم ${menu.name} فعلاً موجود نیست`);
       if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) {
         throw new Error("تعداد نامعتبر است");
       }
