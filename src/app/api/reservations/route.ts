@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const requiresPayment = settings?.depositAmount > 0 ? true : false;
+    const requiresPayment = !!settings && settings.depositAmount > 0 ? true : false;
 
     return NextResponse.json({ payment, requiresPayment }, { status: 201 });
   } catch (error) {
