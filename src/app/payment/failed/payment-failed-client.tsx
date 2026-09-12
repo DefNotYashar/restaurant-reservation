@@ -47,11 +47,16 @@ export function PaymentFailedClient({ initialSearchParams }: Props) {
     setRetrying(true);
     try {
       const res = await fetch(`/api/payments/start?paymentId=${payment.id}`, { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.authority) {
-          window.location.href = `https://sandbox.zarinpal.com/pg/StartPay/${data.authority}`;
-        }
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        alert(data?.error ?? "خطا در شروع مجدد پرداخت");
+        return;
+      }
+      const data = await res.json();
+      if (data.gatewayUrl) {
+        window.location.href = data.gatewayUrl;
+      } else {
+        alert("خطا در شروع مجدد پرداخت");
       }
     } catch {
       alert("خطا در شروع مجدد پرداخت");

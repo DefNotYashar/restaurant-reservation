@@ -1,12 +1,32 @@
 import { db } from "@/lib/db";
 import { payments, reservations, restaurantSettings } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
-const ZARINPAL_MERCHANT_ID = process.env.ZARINPAL_MERCHANT_ID!;
-const ZARINPAL_SANDBOX = process.env.ZARINPAL_SANDBOX !== "false";
+const ZARINPAL_MERCHANT_ID = process.env.ZARINPAL_MERCHANT_ID?.trim();
+const ZARINPAL_SANDBOX = process.env.ZARINPAL_SANDBOX?.toLowerCase() !== "false";
 const BASE_URL = ZARINPAL_SANDBOX
   ? "https://sandbox.zarinpal.com/pg/rest/WebPayment"
   : "https://zarinpal.com/pg/rest/WebPayment";
+const GATEWAY_URL = ZARINPAL_SANDBOX
+  ? "https://sandbox.zarinpal.com/pg/StartPay"
+  : "https://zarinpal.com/pg/StartPay";
+
+function requireMerchantId() {
+  if (!ZARINPAL_MERCHANT_ID || ZARINPAL_MERCHANT_ID === "your_merchant_id_here") {
+    throw new Error("ZARINPAL_MERCHANT_ID is not configured");
+  }
+  return ZARINPAL_MERCHANT_ID;
+}
+
+function getCallbackUrl() {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  if (!appUrl) throw new Error("NEXT_PUBLIC_APP_URL is not configured");
+  return `${appUrl}/api/payments/callback`;
+}
+
+export function getPaymentGatewayUrl(authority: string) {
+  return `${GATEWAY_URL}/${authority}`;
+}
 
 export interface CreatePaymentRequest {
   reservationId: string;
@@ -34,7 +54,7 @@ export class PaymentService {
     return settings;
   }
 
-  async createPayment(reservationId: string, userId?: string) {
+  async createPayment(reservationId: string) {
     const [reservation] = await db
       .select()
       .from(reservations)
@@ -43,12 +63,7 @@ export class PaymentService {
 
     if (!reservation) throw new Error("رزرو پیدا نشد");
 
-    const settings = await this.getDepositSettings(reservation.restaurantId);
-    if (!settings || !settings.depositEnabled || settings.depositAmount <= 0) {
-      throw new Error("دریافت بیعانه غیرفعال است");
-    }
-
-    const existingActivePayment = await db
+    const [existingPayment] = await db
       .select()
       .from(payments)
       .where(
@@ -59,31 +74,49 @@ export class PaymentService {
       )
       .limit(1);
 
-    if (existingActivePayment.length > 0) {
-      return existingActivePayment[0];
+    if (existingPayment?.authority) return existingPayment;
+
+    const settings = await this.getDepositSettings(reservation.restaurantId);
+    if (!settings || !settings.depositEnabled || settings.depositAmount <= 0) {
+      throw new Error("دریافت بیعانه غیرفعال است");
     }
 
+    const merchantId = requireMerchantId();
+    const callbackUrl = getCallbackUrl();
     const amount = settings.depositAmount;
     const description = `بیعانه رزرو ${reservation.code}`;
-    const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback`;
-
     const body = {
-      MerchantID: ZARINPAL_MERCHANT_ID,
+      MerchantID: merchantId,
       Amount: amount,
       CallbackURL: callbackUrl,
       Description: description,
     };
 
-    const res = await fetch(`${BASE_URL}/Request.json`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const requestAuthority = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/Request.json`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) return null;
+        const data: ZarinPalRequestResponse = await res.json().catch(() => null);
+        return data?.status === 100 && data.authority ? data.authority : null;
+      } catch {
+        return null;
+      }
+    };
 
-    const data: ZarinPalRequestResponse = await res.json();
-
-    if (data.status !== 100 || !data.authority) {
-      throw new Error(data.error?.message ?? "خطا در درخواست پرداخت");
+    if (existingPayment) {
+      requireMerchantId();
+      const authority = await requestAuthority();
+      if (!authority) return existingPayment;
+      const [updated] = await db
+        .update(payments)
+        .set({ authority, updatedAt: new Date() })
+        .where(eq(payments.id, existingPayment.id))
+        .returning();
+      return updated ?? existingPayment;
     }
 
     const [payment] = await db
@@ -93,13 +126,22 @@ export class PaymentService {
         amount,
         currency: "IRT",
         status: "PENDING",
-        authority: data.authority,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
       .returning();
 
-    return payment;
+    requireMerchantId();
+    const authority = await requestAuthority();
+    if (!authority) return payment;
+
+    const [updated] = await db
+      .update(payments)
+      .set({ authority, updatedAt: new Date() })
+      .where(eq(payments.id, payment.id))
+      .returning();
+
+    return updated ?? payment;
   }
 
   async verifyPayment(authority: string) {
@@ -115,8 +157,10 @@ export class PaymentService {
       return payment;
     }
 
+    requireMerchantId();
+    const merchantId = ZARINPAL_MERCHANT_ID as string;
     const body = {
-      MerchantID: ZARINPAL_MERCHANT_ID,
+      MerchantID: merchantId,
       Amount: payment.amount,
       Authority: authority,
     };
@@ -156,7 +200,7 @@ export class PaymentService {
       .select()
       .from(payments)
       .where(eq(payments.reservationId, reservationId))
-      .orderBy(payments.createdAt)
+      .orderBy(desc(payments.createdAt))
       .limit(1);
     return payment;
   }

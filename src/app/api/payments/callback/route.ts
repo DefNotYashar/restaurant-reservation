@@ -21,14 +21,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL(`/payment/success?paymentId=${payment.id}`, req.url));
     }
 
-    await db
-      .update(payments)
-      .set({ status: "CANCELLED", updatedAt: new Date() })
-      .where(eq(payments.authority, authority));
+    const [payment] = await db.select().from(payments).where(eq(payments.authority, authority)).limit(1);
+    if (payment) {
+      await db
+        .update(payments)
+        .set({ status: "CANCELLED", updatedAt: new Date() })
+        .where(eq(payments.id, payment.id));
+      return NextResponse.redirect(new URL(`/payment/failed?paymentId=${payment.id}`, req.url));
+    }
 
     return NextResponse.redirect(new URL("/payment/failed", req.url));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "خطای داخلی سرور";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    try {
+      const [failedPayment] = await db.select().from(payments).where(eq(payments.authority, authority)).limit(1);
+      if (failedPayment) {
+        return NextResponse.redirect(new URL(`/payment/failed?paymentId=${failedPayment.id}`, req.url));
+      }
+    } catch {
+      return NextResponse.json({ error: "خطای داخلی سرور" }, { status: 500 });
+    }
+    return NextResponse.json({ error: "خطای داخلی سرور" }, { status: 500 });
   }
 }

@@ -32,3 +32,6 @@ yarn-error.log*
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

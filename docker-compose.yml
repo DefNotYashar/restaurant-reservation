@@ -19,6 +19,8 @@ services:
 
   app:
     build: .
+    env_file:
+      - .env.local
     environment:
       DATABASE_URL: postgresql://postgres:restaurant@db:5432/restaurant_reservation
       NEXT_PUBLIC_APP_URL: http://localhost:3000

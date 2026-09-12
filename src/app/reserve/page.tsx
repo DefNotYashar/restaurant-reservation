@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Plus, Loader2 } from "lucide-react";
-import { getRestaurant, createReservation, type ReservationDto } from "@/lib/api";
+import { getRestaurant, createReservation } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 export default function ReservePage() {
@@ -10,7 +10,7 @@ export default function ReservePage() {
   const [depositEnabled, setDepositEnabled] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0);
 
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [time, setTime] = useState("");
   const [partySize, setPartySize] = useState(4);
   const [name, setName] = useState("");
@@ -31,8 +31,6 @@ export default function ReservePage() {
         })
         .catch(() => {});
     }).catch(() => {});
-
-    setDate(new Date().toISOString().slice(0, 10));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
