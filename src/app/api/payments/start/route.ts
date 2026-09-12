@@ -20,6 +20,9 @@ export async function POST(req: NextRequest) {
     if (payment.status === "PAID") return NextResponse.json({ error: "این پرداخت قابل پردازش نیست" }, { status: 400 });
 
     let paymentToStart = payment;
+    if (!payment.reservationId) {
+      return NextResponse.json({ error: "پرداخت بدون رزرو معتبر نیست" }, { status: 400 });
+    }
     if (payment.status === "FAILED" || payment.status === "CANCELLED") {
       paymentToStart = await paymentService.createPayment(payment.reservationId);
     } else if (!paymentToStart.authority) {

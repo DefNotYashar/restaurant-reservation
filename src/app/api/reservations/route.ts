@@ -67,53 +67,28 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    let customer = await db.query.customers.findFirst({
-      where: (c) => eq(c.phone, phone),
-    });
-
-    if (!customer) {
-      const [created] = await db
-        .insert(customers)
-        .values({
-          restaurantId,
-          name,
-          phone,
-          channel: source ?? "WEB",
-        })
-        .returning();
-      customer = created;
-    } else {
-      [customer] = await db
-        .update(customers)
-        .set({ name, restaurantId })
-        .where(eq(customers.id, customer.id))
-        .returning();
-    }
-
     const settings = await db.query.restaurantSettings.findFirst({
       where: (s) => eq(s.restaurantId, restaurantId),
     });
 
-    const depositEnabled = settings?.depositEnabled ?? false;
-    const depositAmount = settings?.depositAmount ?? 0;
-
-    const reservation = await service.createReservation({
+    const payment = await paymentService.createPaymentIntent({
       restaurantId,
-      customerId: customer.id,
-      date,
-      time,
-      partySize,
-      notes,
-      source,
-      tableIds,
+      amount: settings?.depositAmount ?? 0,
+      metadata: {
+        name,
+        phone,
+        date,
+        time,
+        partySize,
+        notes,
+        source: source ?? "WEB",
+        restaurantId,
+      },
     });
 
-    if (depositEnabled && depositAmount > 0) {
-      const payment = await paymentService.createPayment(reservation.id);
-      return NextResponse.json({ reservation, payment, requiresPayment: true }, { status: 201 });
-    }
+    const requiresPayment = settings?.depositAmount > 0 ? true : false;
 
-    return NextResponse.json({ reservation, requiresPayment: false }, { status: 201 });
+    return NextResponse.json({ payment, requiresPayment }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "خطای داخلی سرور";
     return NextResponse.json({ error: message }, { status: 409 });

@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 export default function ReservePage() {
   const router = useRouter();
   const [restaurant, setRestaurant] = useState<{ openTime: string; closeTime: string; id: string } | null>(null);
-  const [depositEnabled, setDepositEnabled] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0);
 
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -25,8 +24,7 @@ export default function ReservePage() {
       setRestaurant(r);
       fetch(`/api/restaurant-settings?restaurantId=${r.id}`)
         .then((res) => res.json())
-        .then((settings: { depositEnabled: boolean; depositAmount: number }) => {
-          setDepositEnabled(settings.depositEnabled);
+        .then((settings: { depositAmount: number }) => {
           setDepositAmount(settings.depositAmount);
         })
         .catch(() => {});
@@ -71,7 +69,7 @@ export default function ReservePage() {
       {restaurant && (
         <div className="text-sm text-zinc-400">
           ساعت کاری: {restaurant.openTime} - {restaurant.closeTime}
-          {depositEnabled && depositAmount > 0 && (
+          {depositAmount > 0 && (
             <span className="mr-2 text-amber-400">بیعانه: {depositAmount} ریال</span>
           )}
         </div>

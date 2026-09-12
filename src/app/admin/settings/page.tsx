@@ -27,7 +27,6 @@ export default function AdminSettingsPage() {
   const [menu, setMenu] = useState<MenuCategoryDto[]>([]);
   const [newCat, setNewCat] = useState("");
   const [newItem, setNewItem] = useState({ name: "", price: 0, station: "KITCHEN" as "KITCHEN" | "KEBAB", categoryId: "" });
-  const [depositEnabled, setDepositEnabled] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0);
 
   const load = useCallback(() => {
@@ -35,7 +34,7 @@ export default function AdminSettingsPage() {
       fetchAllTables("ALL"),
       fetch("/api/restaurants", { cache: "no-store" }).then((r) => r.json()),
       fetchMenu("ALL").catch(() => [] as MenuCategoryDto[]),
-      fetch("/api/restaurant-settings?restaurantId=" + restaurantId, { cache: "no-store" }).then((r) => r.json()).catch(() => ({ depositEnabled: false, depositAmount: 0 })),
+      fetch("/api/restaurant-settings?restaurantId=" + restaurantId, { cache: "no-store" }).then((r) => r.json()).catch(() => ({ depositAmount: 0 })),
     ])
       .then(([list, rest, menuList, settings]) => {
         setTables(list.sort((a, b) => a.name.localeCompare(b.name, "fa")));
@@ -44,7 +43,6 @@ export default function AdminSettingsPage() {
           setRestaurantName(rest[0].name ?? "");
         }
         setMenu(menuList);
-        setDepositEnabled(settings.depositEnabled);
         setDepositAmount(settings.depositAmount);
         setLoading(false);
       })
@@ -60,9 +58,9 @@ export default function AdminSettingsPage() {
       fetchAllTables("ALL"),
       fetch("/api/restaurants", { cache: "no-store" }).then((r) => r.json()),
       fetchMenu("ALL").catch(() => [] as MenuCategoryDto[]),
-      fetch("/api/restaurant-settings?restaurantId=" + restaurantId, { cache: "no-store" }).then((r) => r.json()).catch(() => ({ depositEnabled: false, depositAmount: 0 })),
+      fetch("/api/restaurant-settings?restaurantId=" + restaurantId, { cache: "no-store" }).then((r) => r.json()).catch(() => ({ depositAmount: 0 })),
     ])
-      .then(([list, rest, menuList, settings]: [TableDto[], { id: string; name?: string }[], MenuCategoryDto[], { depositEnabled: boolean; depositAmount: number }]) => {
+      .then(([list, rest, menuList, settings]: [TableDto[], { id: string; name?: string }[], MenuCategoryDto[], { depositAmount: number }]) => {
         if (cancelled) return;
         setTables(list.sort((a, b) => a.name.localeCompare(b.name, "fa")));
         if (Array.isArray(rest) && rest[0]) {
@@ -70,7 +68,6 @@ export default function AdminSettingsPage() {
           setRestaurantName(rest[0].name ?? "");
         }
         setMenu(menuList);
-        setDepositEnabled(settings.depositEnabled);
         setDepositAmount(settings.depositAmount);
         setLoading(false);
       })
@@ -206,64 +203,38 @@ export default function AdminSettingsPage() {
       <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
         <h2 className="font-semibold mb-1">تنظیمات بیعانه رزرو</h2>
         <p className="text-xs text-zinc-500 mb-3">
-          با فعال کردن بیعانه، مشتری باید مبلغ مشخصی را پیش از تأیید رزرو پرداخت کند.
+          مشتری باید مبلغ بیعانه را پیش از تأیید رزرو پرداخت کند.
         </p>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between rounded-lg border border-zinc-800 p-3">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 space-y-3">
             <div>
-              <div className="font-medium">بیعانه رزرو</div>
-              <div className="text-xs text-zinc-500">مشتری باید بیعانه پرداخت کند تا رزرو ثبت شود</div>
+              <label className="block text-xs text-zinc-500 mb-1">مبلغ بیعانه (ریال)</label>
+              <Input
+                type="number"
+                min={0}
+                step={1000}
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(Number(e.target.value))}
+                className="w-48"
+                dir="ltr"
+              />
             </div>
-            <button
-              onClick={() => run("deposit-toggle", async () => {
-                const newVal = !depositEnabled;
-                setDepositEnabled(newVal);
+            <Button
+              size="sm"
+              disabled={!restaurantId || busy !== null}
+              onClick={() => run("deposit-amount", async () => {
                 const res = await fetch("/api/restaurant-settings", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ restaurantId, depositEnabled: newVal, depositAmount }),
+                  body: JSON.stringify({ restaurantId, depositAmount }),
                 });
-                if (!res.ok) setDepositEnabled(depositEnabled);
+                if (!res.ok) throw new Error("خطا در ذخیره");
               })}
-              disabled={busy !== null || !restaurantId}
-              className={`relative w-12 h-7 rounded-full transition-colors ${depositEnabled ? "bg-emerald-500" : "bg-zinc-700"}`}
-              aria-label={depositEnabled ? "غیرفعال" : "فعال"}
             >
-              <span className={`absolute top-0.5 bottom-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${depositEnabled ? "translate-x-6" : "translate-x-0"}`} />
-            </button>
+              ذخیره مبلغ بیعانه
+            </Button>
           </div>
-
-          {depositEnabled && (
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 space-y-3">
-              <div>
-                <label className="block text-xs text-zinc-500 mb-1">مبلغ بیعانه (ریال)</label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={1000}
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(Number(e.target.value))}
-                  className="w-48"
-                  dir="ltr"
-                />
-              </div>
-              <Button
-                size="sm"
-                disabled={!restaurantId || busy !== null}
-                onClick={() => run("deposit-amount", async () => {
-                  const res = await fetch("/api/restaurant-settings", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ restaurantId, depositEnabled: true, depositAmount }),
-                  });
-                  if (!res.ok) throw new Error("خطا در ذخیره");
-                })}
-              >
-                ذخیره مبلغ بیعانه
-              </Button>
-            </div>
-          )}
         </div>
       </section>
 
